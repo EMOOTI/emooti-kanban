@@ -13,14 +13,14 @@
     "@sendgrid/mail": "^8.1.5",
     "firebase": "^12.0.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "vite": "^6.2.0",
+    "typescript": "~5.7.2"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@types/react": "^19.1.8",
-    "terser": "^5.43.1",
-    "typescript": "~5.7.2",
-    "vite": "^6.2.0"
+    "terser": "^5.43.1"
   },
   "description": "This contains everything you need to run your app locally.",
   "main": "index.js",
