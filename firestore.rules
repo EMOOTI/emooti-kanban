@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Reglas temporales para permitir la creación de usuarios
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
+    }
+    
+    // Proyectos solo para miembros
+    match /projects/{projectId} {
+      allow read, write: if request.auth != null && 
+        request.auth.uid in resource.data.members;
+      allow create: if request.auth != null;
+    }
+    
+    // Tareas solo para miembros del proyecto
+    match /tasks/{taskId} {
+      allow read, write: if request.auth != null && 
+        request.auth.uid in get(/databases/$(database)/documents/projects/$(resource.data.projectId)).data.members;
+      allow create: if request.auth != null;
+    }
+    
+    // Columnas solo para miembros del proyecto
+    match /columns/{columnId} {
+      allow read, write: if request.auth != null && 
+        request.auth.uid in get(/databases/$(database)/documents/projects/$(resource.data.projectId)).data.members;
+      allow create: if request.auth != null;
+    }
+    
+    // Grupos públicos para lectura, escritura solo para miembros
+    match /groups/{groupId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        request.auth.uid in resource.data.memberIds;
+      allow create: if request.auth != null;
+    }
+    
+    // Notificaciones solo para el usuario destinatario
+    match /notifications/{notificationId} {
+      allow read, write: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null;
+    }
+    
+    // Actividades públicas para lectura, escritura solo para usuarios autenticados
+    match /activities/{activityId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+    }
+    
+    // Mensajes solo para usuarios involucrados
+    match /messages/{messageId} {
+      allow read, write: if request.auth != null && 
+        (request.auth.uid == resource.data.fromUserId || 
+         request.auth.uid == resource.data.toUserId);
+      allow create: if request.auth != null;
+    }
+  }
+}

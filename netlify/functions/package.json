@@ -1,0 +1,16 @@
+{
+  "name": "netlify-functions",
+  "version": "1.0.0",
+  "description": "Netlify functions for Emooti",
+  "main": "index.js",
+  "dependencies": {
+    "@sendgrid/mail": "^8.1.5"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["netlify", "functions", "sendgrid"],
+  "author": "",
+  "license": "ISC"
+}

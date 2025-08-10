@@ -1,0 +1,9 @@
+{
+  "name": "Copy of Copy of Copy of Gestor de tareas EMOOTI 1.4",
+  "description": "Una aplicación colaborativa de tablero Kanban, inspirada en Asana, para gestionar proyectos y tareas con una interfaz intuitiva. Incluye tableros de arrastrar y soltar, detalles de tareas, un cronograma del proyecto y un asistente de IA para sugerir subtareas.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera"
+  ],
+  "prompt": ""
+}
