@@ -41,15 +41,15 @@ exports.handler = async function(event, context) {
   try {
     // Solo log en desarrollo
     if (process.env.NODE_ENV === 'development') {
-      console.log('🔧 Función send-invitation iniciada');
-      console.log('Event body:', event.body);
+    console.log('🔧 Función send-invitation iniciada');
+    console.log('Event body:', event.body);
     }
     
     const { email } = JSON.parse(event.body);
 
     if (!email) {
       if (process.env.NODE_ENV === 'development') {
-        console.log('❌ Email no proporcionado');
+      console.log('❌ Email no proporcionado');
       }
       return {
         statusCode: 400,
@@ -62,14 +62,14 @@ exports.handler = async function(event, context) {
     }
 
     if (process.env.NODE_ENV === 'development') {
-      console.log('📧 Email a enviar:', email);
+    console.log('📧 Email a enviar:', email);
     }
 
     // Validar formato de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       if (process.env.NODE_ENV === 'development') {
-        console.log('❌ Formato de email inválido:', email);
+      console.log('❌ Formato de email inválido:', email);
       }
       return {
         statusCode: 400,
@@ -98,14 +98,14 @@ exports.handler = async function(event, context) {
     }
 
     if (process.env.NODE_ENV === 'development') {
-      console.log('🔑 API Key configurada:', apiKey.substring(0, 10) + '...');
+    console.log('🔑 API Key configurada:', apiKey.substring(0, 10) + '...');
     }
     sgMail.setApiKey(apiKey);
 
     // Email remitente verificado
     const fromEmail = 'desarrollo@emooti.com';
     if (process.env.NODE_ENV === 'development') {
-      console.log('📧 Email remitente verificado:', fromEmail);
+    console.log('📧 Email remitente verificado:', fromEmail);
     }
 
     // Crear el mensaje
@@ -118,8 +118,8 @@ exports.handler = async function(event, context) {
           <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
             <h1 style="margin: 0; font-size: 28px;">¡Bienvenido a Emooti!</h1>
             <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Tu gestor de tareas inteligente</p>
-          </div>
-          
+            </div>
+            
           <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
             <h2 style="color: #333; margin-top: 0;">¡Has sido invitado!</h2>
             
@@ -140,7 +140,7 @@ exports.handler = async function(event, context) {
             </div>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="https://gestoremooti.netlify.app" 
+            <a href="https://gestoremooti.netlify.app" 
                  style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                         color: white; 
                         padding: 15px 30px; 
@@ -155,8 +155,8 @@ exports.handler = async function(event, context) {
             
             <p style="color: #999; font-size: 14px; text-align: center; margin-top: 30px;">
               Si tienes alguna pregunta, no dudes en contactarnos.
-            </p>
-          </div>
+              </p>
+            </div>
           
           <div style="text-align: center; margin-top: 20px; color: #999; font-size: 12px;">
             <p>© 2024 Emooti. Todos los derechos reservados.</p>
@@ -185,13 +185,13 @@ exports.handler = async function(event, context) {
     };
 
     if (process.env.NODE_ENV === 'development') {
-      console.log('📤 Enviando email a:', email);
-      console.log('📤 Desde:', fromEmail);
-      console.log('📤 Asunto:', msg.subject);
-      console.log('📤 Contenido HTML:', msg.html.substring(0, 100) + '...');
+    console.log('📤 Enviando email a:', email);
+    console.log('📤 Desde:', fromEmail);
+    console.log('📤 Asunto:', msg.subject);
+    console.log('📤 Contenido HTML:', msg.html.substring(0, 100) + '...');
     }
-
-    const result = await sgMail.send(msg);
+    
+      const result = await sgMail.send(msg);
     
     if (process.env.NODE_ENV === 'development') {
       console.log('✅ Email enviado exitosamente:', result);
@@ -200,14 +200,14 @@ exports.handler = async function(event, context) {
       console.log('📊 Headers de SendGrid:', result[0]?.headers);
     }
 
-    return {
-      statusCode: 200,
-      headers: {
-        ...headers,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        success: true,
+      return {
+        statusCode: 200,
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          success: true,
         message: 'Invitación enviada exitosamente',
         email: email,
         sendGridResponse: {
@@ -217,35 +217,35 @@ exports.handler = async function(event, context) {
       })
     };
 
-  } catch (sendError) {
+    } catch (sendError) {
     if (process.env.NODE_ENV === 'development') {
       console.error('❌ Error específico de SendGrid:', sendError);
       console.error('❌ Error message:', sendError.message);
       console.error('❌ Error code:', sendError.code);
       console.error('❌ Error response:', sendError.response);
     }
-    
-    return {
-      statusCode: 500,
-      headers: {
-        ...headers,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        success: false,
-        error: 'Error al enviar la invitación: ' + sendError.message,
+      
+      return {
+        statusCode: 500,
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          success: false,
+          error: 'Error al enviar la invitación: ' + sendError.message,
         details: process.env.NODE_ENV === 'development' ? sendError.stack : undefined,
         sendGridError: process.env.NODE_ENV === 'development' ? {
-          message: sendError.message,
-          code: sendError.code,
-          response: sendError.response
+            message: sendError.message,
+            code: sendError.code,
+            response: sendError.response
         } : undefined
-      })
-    };
+        })
+      };
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
-      console.error('❌ Error completo:', error);
-      console.error('❌ Stack trace:', error.stack);
+    console.error('❌ Error completo:', error);
+    console.error('❌ Stack trace:', error.stack);
     }
     return {
       statusCode: 500,

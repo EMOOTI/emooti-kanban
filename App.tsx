@@ -18,6 +18,7 @@ import DashboardView from './components/DashboardView';
 import ProjectHeader from './components/ProjectHeader';
 import TaskDetailsModal from './components/TaskDetailsModal';
 import ProjectFormModal from './components/ProjectFormModal';
+import ColumnFormModal from './components/ColumnFormModal';
 import ConfirmModal from './components/ConfirmModal';
 
 const App: React.FC = () => {
@@ -33,11 +34,13 @@ const App: React.FC = () => {
     const [projects, setProjects] = useState<Project[]>([]);
     const [columns, setColumns] = useState<Column[]>([]);
     const [tasks, setTasks] = useState<Task[]>([]);
-    
+
     // Modal State
     const [selectedTaskForModal, setSelectedTaskForModal] = useState<Task | null>(null);
     const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
     const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+    const [columnToEdit, setColumnToEdit] = useState<Column | null>(null);
+    const [isColumnModalOpen, setIsColumnModalOpen] = useState(false);
     const [confirmation, setConfirmation] = useState<{
         title: string;
         message: React.ReactNode;
@@ -50,7 +53,7 @@ const App: React.FC = () => {
         const authUnsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
             console.log('Auth state changed:', firebaseUser?.email);
             setIsLoadingAuth(false);
-            
+    
             if (firebaseUser) {
                 // Simular usuario para pruebas
                 setCurrentUser({
@@ -65,10 +68,10 @@ const App: React.FC = () => {
                 setCurrentUser(null);
             }
         });
-
+    
         return () => authUnsubscribe();
     }, []);
-
+    
     // Firestore Listeners
     useEffect(() => {
         if (!currentUser) return;
@@ -99,35 +102,35 @@ const App: React.FC = () => {
         unsubscribers.push(unsubProjects);
 
         // Listen for columns
-        const columnsQuery = query(collection(db, 'columns'));
-        const unsubColumns = onSnapshot(columnsQuery, (snapshot) => {
+            const columnsQuery = query(collection(db, 'columns'));
+            const unsubColumns = onSnapshot(columnsQuery, (snapshot) => {
             const columnsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Column));
             setColumns(columnsData.sort((a, b) => a.order - b.order));
-        });
+            });
         unsubscribers.push(unsubColumns);
 
         // Listen for tasks
-        const tasksQuery = query(collection(db, 'tasks'));
-        const unsubTasks = onSnapshot(tasksQuery, (snapshot) => {
-            const tasksData = snapshot.docs.map(doc => {
-                const data = doc.data();
-                return {
-                    id: doc.id,
-                    ...data,
-                    columnId: data.status,
+            const tasksQuery = query(collection(db, 'tasks'));
+            const unsubTasks = onSnapshot(tasksQuery, (snapshot) => {
+                const tasksData = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return {
+                        id: doc.id,
+                        ...data,
+                        columnId: data.status,
                     subtasks: data.subtasks || [],
                     collaborators: data.collaborators || [],
-                } as Task;
-            });
+                    } as Task;
+                });
             setTasks(tasksData.sort((a, b) => a.order - b.order));
-        });
+            });
         unsubscribers.push(unsubTasks);
 
-        return () => {
+            return () => {
             unsubscribers.forEach(unsub => unsub());
         };
     }, [currentUser]);
-
+    
     const handleLogout = () => {
         auth.signOut();
     };
@@ -186,7 +189,7 @@ const App: React.FC = () => {
     const handleDeleteProject = (projectId: string) => {
         const projectToDelete = projects.find(p => p.id === projectId);
         if (!projectToDelete) return;
-        
+
         setConfirmation({
             title: `Eliminar Proyecto: "${projectToDelete.name}"`,
             message: <p>¿Estás seguro? Esta acción es irreversible y eliminará todas las tareas y columnas asociadas.</p>,
@@ -202,7 +205,7 @@ const App: React.FC = () => {
             isDestructive: true,
         });
     };
-
+    
     // Task Management Functions
     const handleAddOrUpdateTask = async (taskData: Task | Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => {
         if (!currentUser) return;
@@ -210,10 +213,10 @@ const App: React.FC = () => {
         if ('id' in taskData) {
             // Updating
             const { id, columnId, ...dataToUpdate } = taskData;
-            const taskDoc = {
-                ...dataToUpdate,
-                status: columnId,
-                updatedAt: Timestamp.now(),
+        const taskDoc = {
+            ...dataToUpdate,
+            status: columnId,
+            updatedAt: Timestamp.now(),
             };
             await updateDoc(doc(db, 'tasks', id), taskDoc);
         } else {
@@ -221,8 +224,8 @@ const App: React.FC = () => {
             const newTask = {
                 ...taskData,
                 createdBy: currentUser.id,
-                createdAt: Timestamp.now(),
-                updatedAt: Timestamp.now(),
+            createdAt: Timestamp.now(),
+            updatedAt: Timestamp.now(),
                 status: taskData.columnId,
                 subtasks: taskData.subtasks || [],
                 collaborators: taskData.collaborators || [],
@@ -294,6 +297,48 @@ const App: React.FC = () => {
         setSelectedTaskForModal(newTask);
     };
 
+    // Column Management Functions
+    const handleAddOrUpdateColumn = async (columnData: Column | Omit<Column, 'id' | 'projectId' | 'order'>) => {
+        if (!currentProjectId) return;
+        
+        if ('id' in columnData) {
+            // Updating
+            const {id, ...dataToUpdate} = columnData;
+            await updateDoc(doc(db, 'columns', id), dataToUpdate);
+        } else {
+            // Creating
+            const order = columns.filter(c => c.projectId === currentProjectId).length;
+            const newColumn = { 
+                ...columnData, 
+                projectId: currentProjectId, 
+                order 
+            };
+            await addDoc(collection(db, 'columns'), newColumn);
+        }
+    };
+
+    const handleDeleteColumn = (columnId: string) => {
+        const columnToDelete = columns.find(c => c.id === columnId);
+        if (!columnToDelete) return;
+        
+        const tasksInColumn = tasks.filter(t => t.columnId === columnId).length;
+        if (tasksInColumn > 0) {
+            alert("No se puede eliminar una columna que contiene tareas.");
+            return;
+        }
+        
+        setConfirmation({
+            title: `Eliminar Columna: "${columnToDelete.title}"`,
+            message: '¿Estás seguro? Esta acción es irreversible.',
+            confirmText: 'Sí, eliminar',
+            onConfirm: async () => {
+                await deleteDoc(doc(db, 'columns', columnId));
+                setConfirmation(null);
+            },
+            isDestructive: true
+        });
+    };
+
     const handleCreateNewTask = () => {
         if (!currentUser) return;
         
@@ -328,7 +373,7 @@ const App: React.FC = () => {
         );
     }
 
-    return (
+            return (
         <div className={`h-screen w-screen flex flex-col ${theme}`}>
             {!currentUser ? (
                 <LoginView />
@@ -372,16 +417,16 @@ const App: React.FC = () => {
                         )}
                         <div className="flex-1 overflow-hidden">
                             {view === 'home' && (
-                                <HomeDashboardView 
-                                    currentUser={currentUser}
-                                    projects={userProjects}
-                                    tasks={tasks}
-                                    users={users}
-                                    columns={columns}
-                                    onSelectTask={handleSelectTaskForModal}
-                                    onCreateTask={handleCreateNewTask}
-                                    onToggleComplete={handleToggleTaskComplete}
-                                />
+                <HomeDashboardView 
+                    currentUser={currentUser}
+                    projects={userProjects}
+                    tasks={tasks}
+                    users={users}
+                    columns={columns}
+                    onSelectTask={handleSelectTaskForModal}
+                    onCreateTask={handleCreateNewTask}
+                    onToggleComplete={handleToggleTaskComplete}
+                />
                             )}
                             {view === 'projects' && (
                                 <ProjectsView 
@@ -403,30 +448,30 @@ const App: React.FC = () => {
                                 />
                             )}
                             {view === 'mytasks' && (
-                                <MyTasksView 
-                                    currentUser={currentUser}
-                                    projects={userProjects}
-                                    tasks={tasks}
-                                    users={users}
-                                    columns={columns}
-                                    onSelectTask={handleSelectTaskForModal}
-                                    onCreateTask={handleCreateNewTask}
-                                    onUpdateTask={(taskId, updates) => {
-                                        const task = tasks.find(t => t.id === taskId);
-                                        if (task) {
+                <MyTasksView 
+                    currentUser={currentUser}
+                    projects={userProjects}
+                    tasks={tasks}
+                    users={users}
+                    columns={columns}
+                    onSelectTask={handleSelectTaskForModal}
+                    onCreateTask={handleCreateNewTask}
+                    onUpdateTask={(taskId, updates) => {
+                        const task = tasks.find(t => t.id === taskId);
+                        if (task) {
                                             handleAddOrUpdateTask({ ...task, ...updates });
-                                        }
-                                    }}
-                                    onNavigateToView={handleNavigateToView}
+                        }
+                    }}
+                    onNavigateToView={handleNavigateToView}
                                     onNavigateToUsers={() => {}}
-                                    currentView={view}
+                    currentView={view}
                                     currentProjectId={null}
-                                    onToggleComplete={handleToggleTaskComplete}
-                                />
+                    onToggleComplete={handleToggleTaskComplete}
+                />
                             )}
                             {view === 'settings' && (
-                                <SettingsView 
-                                    user={currentUser}
+                <SettingsView 
+                    user={currentUser}
                                     onUpdateUser={() => {}}
                                 />
                             )}
@@ -434,34 +479,34 @@ const App: React.FC = () => {
                             {currentProjectId && ['board', 'timeline', 'dashboard'].includes(view) && (
                                 (() => {
                                     console.log('🔧 Renderizando vista de proyecto - currentProjectId:', currentProjectId, 'view:', view);
-                                    const currentProject = projects.find(p => p.id === currentProjectId);
+            const currentProject = projects.find(p => p.id === currentProjectId);
                                     if (!currentProject) {
                                         console.error('❌ Proyecto no encontrado para renderizar:', currentProjectId);
                                         return null;
                                     }
-                                    if (!currentProject) return null;
+            if (!currentProject) return null;
 
                                     const projectColumns = columns.filter(c => c.projectId === currentProjectId);
                                     const projectTasks = tasks.filter(t => t.projectId === currentProjectId);
                                     const projectUsers = users.filter(u => currentProject.members.includes(u.id));
 
-                                    return (
-                                        <div className="flex flex-col h-full">
-                                            <ProjectHeader 
-                                                project={currentProject}
-                                                currentView={view as 'board' | 'timeline' | 'dashboard'}
-                                                onViewChange={(newView) => setView(newView)}
-                                                onBackToProjects={handleGoToProjects}
+            return (
+                <div className="flex flex-col h-full">
+                    <ProjectHeader 
+                        project={currentProject}
+                        currentView={view as 'board' | 'timeline' | 'dashboard'}
+                        onViewChange={(newView) => setView(newView)}
+                        onBackToProjects={handleGoToProjects}
                                                 onOpenSettings={() => {}}
                                                 currentUser={currentUser}
                                                 onLogout={handleLogout}
                                                 notifications={[]}
                                                 onMarkNotificationsAsRead={() => {}}
-                                            />
-                                            <div className="flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900">
-                                                <div className="h-full p-6 md:p-8 lg:p-10">
-                                                    {view === 'board' && (
-                                                        <BoardView 
+                    />
+                    <div className="flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900">
+                        <div className="h-full p-6 md:p-8 lg:p-10">
+                            {view === 'board' && (
+                                                                                        <BoardView 
                                                             columns={projectColumns} 
                                                             tasks={projectTasks}
                                                             users={projectUsers}
@@ -473,14 +518,20 @@ const App: React.FC = () => {
                                                             deleteTask={handleDeleteTask} 
                                                             duplicateTask={() => {}}
                                                             createFollowUpTask={() => {}}
-                                                            onAddColumn={() => {}}
-                                                            onEditColumn={() => {}}
-                                                            onDeleteColumn={() => {}}
+                                                            onAddColumn={() => {
+                                                                setColumnToEdit(null);
+                                                                setIsColumnModalOpen(true);
+                                                            }}
+                                                            onEditColumn={(column) => {
+                                                                setColumnToEdit(column);
+                                                                setIsColumnModalOpen(true);
+                                                            }}
+                                                            onDeleteColumn={handleDeleteColumn}
                                                             onOpenColorPicker={() => {}}
                                                             onToggleComplete={handleToggleTaskComplete}
                                                         />
-                                                    )}
-                                                    {view === 'timeline' && (
+                            )}
+                            {view === 'timeline' && (
                                                         <TimelineView 
                                                             tasks={projectTasks} 
                                                             onUpdateTask={(task: Task) => {
@@ -488,23 +539,23 @@ const App: React.FC = () => {
                                                             }} 
                                                             onAddTask={() => addTask(projectColumns[0]?.id || '')}
                                                         />
-                                                    )}
-                                                    {view === 'dashboard' && (
-                                                        <DashboardView 
-                                                            project={currentProject} 
-                                                            tasks={projectTasks} 
-                                                            columns={projectColumns} 
+                            )}
+                            {view === 'dashboard' && (
+                                <DashboardView 
+                                    project={currentProject} 
+                                    tasks={projectTasks} 
+                                    columns={projectColumns} 
                                                             activities={[]} 
-                                                            currentUser={currentUser} 
-                                                            onSelectTask={handleSelectTaskForModal} 
-                                                            onToggleComplete={handleToggleTaskComplete}
-                                                            users={projectUsers} 
-                                                        />
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
+                                    currentUser={currentUser} 
+                                    onSelectTask={handleSelectTaskForModal} 
+                                    onToggleComplete={handleToggleTaskComplete}
+                                    users={projectUsers} 
+                                />
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
                                 })()
                             )}
 
@@ -548,6 +599,17 @@ const App: React.FC = () => {
                         setProjectToEdit(null);
                     }} 
                     onSave={handleAddOrUpdateProject} 
+                />
+            )}
+
+            {isColumnModalOpen && (
+                <ColumnFormModal
+                    columnToEdit={columnToEdit}
+                    onClose={() => {
+                        setIsColumnModalOpen(false);
+                        setColumnToEdit(null);
+                    }}
+                    onSave={handleAddOrUpdateColumn}
                 />
             )}
 
