@@ -138,8 +138,19 @@ const App: React.FC = () => {
     };
 
     const handleSelectProject = (projectId: string) => {
+        console.log('🔧 handleSelectProject llamado con projectId:', projectId);
+        console.log('🔧 Proyectos disponibles:', projects.map(p => ({ id: p.id, name: p.name })));
+        
+        const project = projects.find(p => p.id === projectId);
+        if (!project) {
+            console.error('❌ Proyecto no encontrado:', projectId);
+            return;
+        }
+        
+        console.log('✅ Proyecto encontrado:', project.name);
         setCurrentProjectId(projectId);
         setView('dashboard'); // Default to dashboard view when selecting a project
+        console.log('✅ Estado actualizado - currentProjectId:', projectId, 'view: dashboard');
     };
 
     const handleGoToProjects = () => {
@@ -420,7 +431,12 @@ const App: React.FC = () => {
                             {/* Project Views (board, timeline, dashboard) */}
                             {currentProjectId && ['board', 'timeline', 'dashboard'].includes(view) && (
                                 (() => {
+                                    console.log('🔧 Renderizando vista de proyecto - currentProjectId:', currentProjectId, 'view:', view);
                                     const currentProject = projects.find(p => p.id === currentProjectId);
+                                    if (!currentProject) {
+                                        console.error('❌ Proyecto no encontrado para renderizar:', currentProjectId);
+                                        return null;
+                                    }
                                     if (!currentProject) return null;
 
                                     const projectColumns = columns.filter(c => c.projectId === currentProjectId);
