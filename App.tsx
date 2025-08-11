@@ -1553,7 +1553,7 @@ const App: React.FC = () => {
         return null;
     };
 
-    console.log('Vista actual:', view);
+    console.log('Vista actual:', view, 'Usuario:', currentUser?.firstName);
     return (
         <div className={`h-screen w-screen flex flex-col ${theme}`}>
             {!currentUser ? (
@@ -1580,6 +1580,10 @@ const App: React.FC = () => {
                         onSendMessage={handleSendMessage}
                     />
                     <div className="flex-1 overflow-hidden flex flex-col">
+                        {/* Indicador de versión temporal */}
+                        <div className="bg-blue-500 text-white text-xs px-2 py-1 text-center">
+                            Emooti v2.1 - Menú de usuario activado
+                        </div>
                         {!currentProjectId && (
                             <Header 
                                 currentUser={currentUser}
