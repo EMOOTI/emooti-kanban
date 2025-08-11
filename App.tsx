@@ -360,14 +360,16 @@ const App: React.FC = () => {
                         <div className="bg-green-500 text-white text-lg font-bold px-4 py-2 text-center">
                             ✅ Emooti v2.1 - MENÚ DE USUARIO ACTIVADO
                         </div>
-                        <Header 
-                            currentUser={currentUser}
-                            onLogout={handleLogout}
-                            onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                            onBackToProjects={() => {}}
-                            notifications={[]}
-                            onMarkNotificationsAsRead={() => {}}
-                        />
+                        {!currentProjectId && (
+                            <Header 
+                                currentUser={currentUser}
+                                onLogout={handleLogout}
+                                onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                                onBackToProjects={handleGoToProjects}
+                                notifications={[]}
+                                onMarkNotificationsAsRead={() => {}}
+                            />
+                        )}
                         <div className="flex-1 overflow-hidden">
                             {view === 'home' && (
                                 <HomeDashboardView 
