@@ -1427,7 +1427,7 @@ const App: React.FC = () => {
             );
         }
 
-                                    if (view === 'inbox') {
+        if (view === 'inbox') {
             return (
                 <InboxView 
                     currentUser={currentUser}
