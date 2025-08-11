@@ -4,6 +4,7 @@ import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { auth } from './services/firebase';
 import { User } from './types';
 import { useTheme } from './hooks/useTheme';
+import LoginView from './components/LoginView';
 
 const App: React.FC = () => {
     const { theme } = useTheme();
@@ -56,13 +57,7 @@ const App: React.FC = () => {
             <div className="flex-1 p-4">
                 <h1 className="text-2xl font-bold mb-4">Emooti - Gestor de Tareas</h1>
                 {!currentUser ? (
-                    <div className="bg-blue-100 p-4 rounded">
-                        <h2 className="text-lg font-semibold">Estado: No autenticado</h2>
-                        <p>Debe aparecer LoginView aquí</p>
-                        <p className="text-sm text-gray-600 mt-2">
-                            Usa el formulario de login normal
-                        </p>
-                    </div>
+                    <LoginView />
                 ) : (
                     <div className="bg-green-100 p-4 rounded">
                         <h2 className="text-lg font-semibold">Estado: Autenticado</h2>
