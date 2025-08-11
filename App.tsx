@@ -12,6 +12,10 @@ import HomeDashboardView from './components/HomeDashboardView';
 import ProjectsView from './components/ProjectsView';
 import MyTasksView from './components/MyTasksView';
 import SettingsView from './components/SettingsView';
+import BoardView from './components/BoardView';
+import TimelineView from './components/TimelineView';
+import DashboardView from './components/DashboardView';
+import ProjectHeader from './components/ProjectHeader';
 import TaskDetailsModal from './components/TaskDetailsModal';
 import ProjectFormModal from './components/ProjectFormModal';
 import ConfirmModal from './components/ConfirmModal';
@@ -22,6 +26,7 @@ const App: React.FC = () => {
     const [isLoadingAuth, setIsLoadingAuth] = useState(true);
     const [view, setView] = useState<View>('home');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
     
     // Firestore State
     const [users, setUsers] = useState<User[]>([]);
@@ -129,6 +134,17 @@ const App: React.FC = () => {
 
     const handleNavigateToView = (newView: string) => {
         setView(newView as View);
+        setCurrentProjectId(null); // Reset project when navigating to main views
+    };
+
+    const handleSelectProject = (projectId: string) => {
+        setCurrentProjectId(projectId);
+        setView('dashboard'); // Default to dashboard view when selecting a project
+    };
+
+    const handleGoToProjects = () => {
+        setCurrentProjectId(null);
+        setView('projects');
     };
 
     const userProjects = projects.filter(p => p.members.includes(currentUser?.id || ''));
@@ -237,6 +253,36 @@ const App: React.FC = () => {
         setSelectedTaskForModal(null);
     };
 
+    const moveTask = async (draggedTaskId: string, newColumnId: string) => {
+        await updateDoc(doc(db, 'tasks', draggedTaskId), { 
+            status: newColumnId, 
+            updatedAt: Timestamp.now() 
+        });
+    };
+
+    const addTask = (columnId: string) => {
+        if (!currentUser || !currentProjectId) return;
+        
+        const newTask: Task = {
+            id: 'temp-' + Date.now(),
+            title: '',
+            description: '',
+            priority: Priority.Medium,
+            assignedTo: currentUser.id,
+            createdBy: currentUser.id,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            projectId: currentProjectId,
+            columnId: columnId,
+            status: 'pending',
+            order: tasks.filter(t => t.columnId === columnId).length,
+            subtasks: [],
+            isNewTask: true
+        };
+        
+        setSelectedTaskForModal(newTask);
+    };
+
     const handleCreateNewTask = () => {
         if (!currentUser) return;
         
@@ -284,11 +330,17 @@ const App: React.FC = () => {
                         users={users}
                         currentView={view}
                         onNavigateToView={handleNavigateToView}
-                        onSelectProject={() => {}}
-                        onAddProject={() => {}}
+                        onSelectProject={handleSelectProject}
+                        onAddProject={() => {
+                            setProjectToEdit(null);
+                            setIsProjectModalOpen(true);
+                        }}
                         deleteUser={() => {}}
-                        deleteProject={() => {}}
-                        onEditProject={() => {}}
+                        deleteProject={handleDeleteProject}
+                        onEditProject={(project) => {
+                            setProjectToEdit(project);
+                            setIsProjectModalOpen(true);
+                        }}
                         onAddMembers={() => {}}
                         onNavigateToSupport={() => {}}
                         onSendMessage={() => {}}
@@ -322,7 +374,7 @@ const App: React.FC = () => {
                                 <ProjectsView 
                                     projects={userProjects}
                                     currentUser={currentUser}
-                                    onSelectProject={() => {}}
+                                    onSelectProject={handleSelectProject}
                                     onEditProject={(project) => {
                                         setProjectToEdit(project);
                                         setIsProjectModalOpen(true);
@@ -365,7 +417,80 @@ const App: React.FC = () => {
                                     onUpdateUser={() => {}}
                                 />
                             )}
-                            {!['home', 'projects', 'mytasks', 'settings'].includes(view) && (
+                            {/* Project Views (board, timeline, dashboard) */}
+                            {currentProjectId && ['board', 'timeline', 'dashboard'].includes(view) && (
+                                (() => {
+                                    const currentProject = projects.find(p => p.id === currentProjectId);
+                                    if (!currentProject) return null;
+
+                                    const projectColumns = columns.filter(c => c.projectId === currentProjectId);
+                                    const projectTasks = tasks.filter(t => t.projectId === currentProjectId);
+                                    const projectUsers = users.filter(u => currentProject.members.includes(u.id));
+
+                                    return (
+                                        <div className="flex flex-col h-full">
+                                            <ProjectHeader 
+                                                project={currentProject}
+                                                currentView={view as 'board' | 'timeline' | 'dashboard'}
+                                                onViewChange={(newView) => setView(newView)}
+                                                onBackToProjects={handleGoToProjects}
+                                                onOpenSettings={() => {}}
+                                                currentUser={currentUser}
+                                                onLogout={handleLogout}
+                                                notifications={[]}
+                                                onMarkNotificationsAsRead={() => {}}
+                                            />
+                                            <div className="flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900">
+                                                <div className="h-full p-6 md:p-8 lg:p-10">
+                                                    {view === 'board' && (
+                                                        <BoardView 
+                                                            columns={projectColumns} 
+                                                            tasks={projectTasks}
+                                                            users={projectUsers}
+                                                            teams={[]}
+                                                            onSelectTask={handleSelectTaskForModal} 
+                                                            moveTask={moveTask} 
+                                                            moveColumn={() => {}}
+                                                            addTask={addTask} 
+                                                            deleteTask={handleDeleteTask} 
+                                                            duplicateTask={() => {}}
+                                                            createFollowUpTask={() => {}}
+                                                            onAddColumn={() => {}}
+                                                            onEditColumn={() => {}}
+                                                            onDeleteColumn={() => {}}
+                                                            onOpenColorPicker={() => {}}
+                                                            onToggleComplete={handleToggleTaskComplete}
+                                                        />
+                                                    )}
+                                                    {view === 'timeline' && (
+                                                        <TimelineView 
+                                                            tasks={projectTasks} 
+                                                            onUpdateTask={(task: Task) => {
+                                                                handleAddOrUpdateTask(task);
+                                                            }} 
+                                                            onAddTask={() => addTask(projectColumns[0]?.id || '')}
+                                                        />
+                                                    )}
+                                                    {view === 'dashboard' && (
+                                                        <DashboardView 
+                                                            project={currentProject} 
+                                                            tasks={projectTasks} 
+                                                            columns={projectColumns} 
+                                                            activities={[]} 
+                                                            currentUser={currentUser} 
+                                                            onSelectTask={handleSelectTaskForModal} 
+                                                            onToggleComplete={handleToggleTaskComplete}
+                                                            users={projectUsers} 
+                                                        />
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })()
+                            )}
+
+                            {!['home', 'projects', 'mytasks', 'settings', 'board', 'timeline', 'dashboard'].includes(view) && !currentProjectId && (
                                 <div className="p-4">
                                     <h1 className="text-2xl font-bold mb-4">Vista: {view}</h1>
                                     <div className="bg-blue-100 p-4 rounded">
