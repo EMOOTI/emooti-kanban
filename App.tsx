@@ -59,7 +59,7 @@ const App: React.FC = () => {
                     firstName: 'Usuario',
                     lastName: 'Prueba',
                     role: 'User' as any,
-                    avatarUrl: 'https://via.placeholder.com/40'
+                    avatarUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiM2QjcyODAiLz4KPHN2ZyB4PSIxMiIgeT0iMTIiIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cGF0aCBkPSJNMTIgMTJDMTRuMjEgMCAyNS41IDkuNzkgMjUuNSAxMkMyNS41IDE0LjIxIDE0LjIxIDI1LjUgMTIgMjUuNUM5Ljc5IDI1LjUgLTEuNSAxNC4yMSAtMS41IDEyQy0xLjUgOS43OSA5Ljc5IC0xLjUgMTIgLTEuNVoiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CjxwYXRoIGQ9Ik0xMiA2QzEzLjY1NjkgNiAxNSA3LjM0MzE1IDE1IDlDMTUgMTAuNjU2OSAxMy42NTY5IDEyIDEyIDEyQzEwLjM0MzEgMTIgOSAxMC42NTY5IDkgOUM5IDcuMzQzMTUgMTAuMzQzMSA2IDEyIDZaIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8L3N2Zz4KPC9zdmc+'
                 } as User);
             } else {
                 setCurrentUser(null);
