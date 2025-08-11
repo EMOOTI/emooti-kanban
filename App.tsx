@@ -1502,6 +1502,10 @@ const App: React.FC = () => {
                         onViewChange={(newView) => setView(newView)}
                         onBackToProjects={handleGoToProjects}
                         onOpenSettings={handleOpenProjectSettings}
+                        currentUser={currentUser}
+                        onLogout={handleLogout}
+                        notifications={notifications}
+                        onMarkNotificationsAsRead={handleMarkNotificationsAsRead}
                     />
                     <div className="flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900">
                         <div className="h-full p-6 md:p-8 lg:p-10">
@@ -1575,8 +1579,20 @@ const App: React.FC = () => {
                         onNavigateToSupport={handleNavigateToSupport}
                         onSendMessage={handleSendMessage}
                     />
-                    <div className="flex-1 overflow-hidden">
-                        <MainContent />
+                    <div className="flex-1 overflow-hidden flex flex-col">
+                        {!currentProjectId && (
+                            <Header 
+                                currentUser={currentUser}
+                                onLogout={handleLogout}
+                                onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                                onBackToProjects={handleGoToProjects}
+                                notifications={notifications}
+                                onMarkNotificationsAsRead={handleMarkNotificationsAsRead}
+                            />
+                        )}
+                        <div className="flex-1 overflow-hidden">
+                            <MainContent />
+                        </div>
                     </div>
                 </div>
             )}
@@ -1589,6 +1605,7 @@ const App: React.FC = () => {
                     projects={sortedAllProjects}
                     columns={columns}
                     teams={teams}
+                    allTasks={tasks}
                     onClose={handleCloseTaskModal}
                     onUpdateTask={handleUpdateTaskFromModal}
                 />
