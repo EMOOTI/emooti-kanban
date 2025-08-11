@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { db, auth } from './services/firebase';
-import { collection, doc, onSnapshot, query, where } from 'firebase/firestore';
-import { User, View, Project, Task, Column } from './types';
+import { collection, doc, onSnapshot, query, where, addDoc, updateDoc, deleteDoc, Timestamp, writeBatch } from 'firebase/firestore';
+import { User, View, Project, Task, Column, Priority } from './types';
 import { useTheme } from './hooks/useTheme';
 import LoginView from './components/LoginView';
 import Sidebar from './components/Sidebar';
@@ -118,6 +118,82 @@ const App: React.FC = () => {
 
     const userProjects = projects.filter(p => p.members.includes(currentUser?.id || ''));
 
+    // Project Management Functions
+    const handleAddOrUpdateProject = async (projectData: Project | Omit<Project, 'id' | 'createdAt' | 'status' | 'ownerId'>) => {
+        if (!currentUser) return;
+        
+        if ('id' in projectData) {
+            // Updating
+            const projectDoc = doc(db, 'projects', projectData.id);
+            await updateDoc(projectDoc, { ...projectData });
+        } else {
+            // Creating
+            const membersArray = [...(projectData.members || []), currentUser.id];
+            const newProject = {
+                ...projectData,
+                ownerId: currentUser.id,
+                members: membersArray,
+                createdAt: Timestamp.now(),
+                status: 'activo',
+                teams: projectData.teams || [],
+            };
+            await addDoc(collection(db, 'projects'), newProject);
+        }
+    };
+
+    const handleDeleteProject = async (projectId: string) => {
+        const batch = writeBatch(db);
+        batch.delete(doc(db, 'projects', projectId));
+        tasks.filter(t => t.projectId === projectId).forEach(t => batch.delete(doc(db, 'tasks', t.id)));
+        columns.filter(c => c.projectId === projectId).forEach(c => batch.delete(doc(db, 'columns', c.id)));
+        await batch.commit();
+    };
+
+    // Task Management Functions
+    const handleAddOrUpdateTask = async (taskData: Task | Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => {
+        if (!currentUser) return;
+        
+        if ('id' in taskData) {
+            // Updating
+            const { id, columnId, ...dataToUpdate } = taskData;
+            const taskDoc = {
+                ...dataToUpdate,
+                status: columnId,
+                updatedAt: Timestamp.now(),
+            };
+            await updateDoc(doc(db, 'tasks', id), taskDoc);
+        } else {
+            // Creating
+            const newTask = {
+                ...taskData,
+                createdBy: currentUser.id,
+                createdAt: Timestamp.now(),
+                updatedAt: Timestamp.now(),
+                status: taskData.columnId,
+                subtasks: taskData.subtasks || [],
+                collaborators: taskData.collaborators || [],
+            };
+            await addDoc(collection(db, 'tasks'), newTask);
+        }
+    };
+
+    const handleDeleteTask = async (taskId: string) => {
+        await deleteDoc(doc(db, 'tasks', taskId));
+    };
+
+    const handleToggleTaskComplete = async (taskId: string) => {
+        const task = tasks.find(t => t.id === taskId);
+        if (!task) return;
+        
+        const currentStatus = task.taskStatus || 'pending';
+        const newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
+        
+        await updateDoc(doc(db, 'tasks', taskId), { 
+            taskStatus: newStatus,
+            updatedAt: Timestamp.now() 
+        });
+    };
+
     if (isLoadingAuth) {
         return (
             <div className={`h-screen w-screen flex items-center justify-center ${theme}`}>
@@ -172,8 +248,17 @@ const App: React.FC = () => {
                                     users={users}
                                     columns={columns}
                                     onSelectTask={() => {}}
-                                    onCreateTask={() => {}}
-                                    onToggleComplete={() => {}}
+                                    onCreateTask={() => handleAddOrUpdateTask({
+                                        title: 'Nueva Tarea',
+                                        description: '',
+                                        priority: Priority.Medium,
+                                        assignedTo: currentUser.id,
+                                        createdBy: currentUser.id,
+                                        projectId: userProjects[0]?.id || '',
+                                        columnId: columns.find(c => c.projectId === userProjects[0]?.id)?.id || '',
+                                        order: 0
+                                    })}
+                                    onToggleComplete={handleToggleTaskComplete}
                                 />
                             )}
                             {view === 'projects' && (
@@ -182,8 +267,13 @@ const App: React.FC = () => {
                                     currentUser={currentUser}
                                     onSelectProject={() => {}}
                                     onEditProject={() => {}}
-                                    onDeleteProject={() => {}}
-                                    onAddProject={() => {}}
+                                    onDeleteProject={handleDeleteProject}
+                                    onAddProject={() => handleAddOrUpdateProject({
+                                        name: 'Nuevo Proyecto',
+                                        description: '',
+                                        members: [currentUser.id],
+                                        teams: []
+                                    })}
                                     onOpenColorPicker={() => {}}
                                     onAddMembers={() => {}}
                                     onCreateAITask={() => {}}
@@ -197,13 +287,27 @@ const App: React.FC = () => {
                                     users={users}
                                     columns={columns}
                                     onSelectTask={() => {}}
-                                    onCreateTask={() => {}}
-                                    onUpdateTask={() => {}}
+                                    onCreateTask={() => handleAddOrUpdateTask({
+                                        title: 'Nueva Tarea',
+                                        description: '',
+                                        priority: Priority.Medium,
+                                        assignedTo: currentUser.id,
+                                        createdBy: currentUser.id,
+                                        projectId: userProjects[0]?.id || '',
+                                        columnId: columns.find(c => c.projectId === userProjects[0]?.id)?.id || '',
+                                        order: 0
+                                    })}
+                                    onUpdateTask={(taskId, updates) => {
+                                        const task = tasks.find(t => t.id === taskId);
+                                        if (task) {
+                                            handleAddOrUpdateTask({ ...task, ...updates });
+                                        }
+                                    }}
                                     onNavigateToView={handleNavigateToView}
                                     onNavigateToUsers={() => {}}
                                     currentView={view}
                                     currentProjectId={null}
-                                    onToggleComplete={() => {}}
+                                    onToggleComplete={handleToggleTaskComplete}
                                 />
                             )}
                             {view === 'settings' && (
