@@ -12,6 +12,9 @@ import HomeDashboardView from './components/HomeDashboardView';
 import ProjectsView from './components/ProjectsView';
 import MyTasksView from './components/MyTasksView';
 import SettingsView from './components/SettingsView';
+import TaskDetailsModal from './components/TaskDetailsModal';
+import ProjectFormModal from './components/ProjectFormModal';
+import ConfirmModal from './components/ConfirmModal';
 
 const App: React.FC = () => {
     const { theme } = useTheme();
@@ -25,6 +28,18 @@ const App: React.FC = () => {
     const [projects, setProjects] = useState<Project[]>([]);
     const [columns, setColumns] = useState<Column[]>([]);
     const [tasks, setTasks] = useState<Task[]>([]);
+    
+    // Modal State
+    const [selectedTaskForModal, setSelectedTaskForModal] = useState<Task | null>(null);
+    const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
+    const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+    const [confirmation, setConfirmation] = useState<{
+        title: string;
+        message: React.ReactNode;
+        confirmText: string;
+        onConfirm: () => void;
+        isDestructive?: boolean;
+    } | null>(null);
 
     useEffect(() => {
         const authUnsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
@@ -141,12 +156,24 @@ const App: React.FC = () => {
         }
     };
 
-    const handleDeleteProject = async (projectId: string) => {
-        const batch = writeBatch(db);
-        batch.delete(doc(db, 'projects', projectId));
-        tasks.filter(t => t.projectId === projectId).forEach(t => batch.delete(doc(db, 'tasks', t.id)));
-        columns.filter(c => c.projectId === projectId).forEach(c => batch.delete(doc(db, 'columns', c.id)));
-        await batch.commit();
+    const handleDeleteProject = (projectId: string) => {
+        const projectToDelete = projects.find(p => p.id === projectId);
+        if (!projectToDelete) return;
+        
+        setConfirmation({
+            title: `Eliminar Proyecto: "${projectToDelete.name}"`,
+            message: <p>¿Estás seguro? Esta acción es irreversible y eliminará todas las tareas y columnas asociadas.</p>,
+            confirmText: 'Sí, eliminar proyecto',
+            onConfirm: async () => {
+                const batch = writeBatch(db);
+                batch.delete(doc(db, 'projects', projectId));
+                tasks.filter(t => t.projectId === projectId).forEach(t => batch.delete(doc(db, 'tasks', t.id)));
+                columns.filter(c => c.projectId === projectId).forEach(c => batch.delete(doc(db, 'columns', c.id)));
+                await batch.commit();
+                setConfirmation(null);
+            },
+            isDestructive: true,
+        });
     };
 
     // Task Management Functions
@@ -192,6 +219,45 @@ const App: React.FC = () => {
             taskStatus: newStatus,
             updatedAt: Timestamp.now() 
         });
+    };
+
+    const handleSelectTaskForModal = (task: Task) => {
+        setSelectedTaskForModal(task);
+    };
+
+    const handleCloseTaskModal = () => {
+        setSelectedTaskForModal(null);
+    };
+
+    const handleUpdateTaskFromModal = (taskId: string, updates: Partial<Task>) => {
+        const task = tasks.find(t => t.id === taskId);
+        if (task) {
+            handleAddOrUpdateTask({ ...task, ...updates });
+        }
+        setSelectedTaskForModal(null);
+    };
+
+    const handleCreateNewTask = () => {
+        if (!currentUser) return;
+        
+        const newTask: Task = {
+            id: 'temp-' + Date.now(),
+            title: '',
+            description: '',
+            priority: Priority.Medium,
+            assignedTo: currentUser.id,
+            createdBy: currentUser.id,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            projectId: userProjects[0]?.id || '',
+            columnId: columns.find(c => c.projectId === userProjects[0]?.id)?.id || '',
+            status: 'pending',
+            order: 0,
+            subtasks: [],
+            isNewTask: true
+        };
+        
+        setSelectedTaskForModal(newTask);
     };
 
     if (isLoadingAuth) {
@@ -247,17 +313,8 @@ const App: React.FC = () => {
                                     tasks={tasks}
                                     users={users}
                                     columns={columns}
-                                    onSelectTask={() => {}}
-                                    onCreateTask={() => handleAddOrUpdateTask({
-                                        title: 'Nueva Tarea',
-                                        description: '',
-                                        priority: Priority.Medium,
-                                        assignedTo: currentUser.id,
-                                        createdBy: currentUser.id,
-                                        projectId: userProjects[0]?.id || '',
-                                        columnId: columns.find(c => c.projectId === userProjects[0]?.id)?.id || '',
-                                        order: 0
-                                    })}
+                                    onSelectTask={handleSelectTaskForModal}
+                                    onCreateTask={handleCreateNewTask}
                                     onToggleComplete={handleToggleTaskComplete}
                                 />
                             )}
@@ -266,14 +323,15 @@ const App: React.FC = () => {
                                     projects={userProjects}
                                     currentUser={currentUser}
                                     onSelectProject={() => {}}
-                                    onEditProject={() => {}}
+                                    onEditProject={(project) => {
+                                        setProjectToEdit(project);
+                                        setIsProjectModalOpen(true);
+                                    }}
                                     onDeleteProject={handleDeleteProject}
-                                    onAddProject={() => handleAddOrUpdateProject({
-                                        name: 'Nuevo Proyecto',
-                                        description: '',
-                                        members: [currentUser.id],
-                                        teams: []
-                                    })}
+                                    onAddProject={() => {
+                                        setProjectToEdit(null);
+                                        setIsProjectModalOpen(true);
+                                    }}
                                     onOpenColorPicker={() => {}}
                                     onAddMembers={() => {}}
                                     onCreateAITask={() => {}}
@@ -286,17 +344,8 @@ const App: React.FC = () => {
                                     tasks={tasks}
                                     users={users}
                                     columns={columns}
-                                    onSelectTask={() => {}}
-                                    onCreateTask={() => handleAddOrUpdateTask({
-                                        title: 'Nueva Tarea',
-                                        description: '',
-                                        priority: Priority.Medium,
-                                        assignedTo: currentUser.id,
-                                        createdBy: currentUser.id,
-                                        projectId: userProjects[0]?.id || '',
-                                        columnId: columns.find(c => c.projectId === userProjects[0]?.id)?.id || '',
-                                        order: 0
-                                    })}
+                                    onSelectTask={handleSelectTaskForModal}
+                                    onCreateTask={handleCreateNewTask}
                                     onUpdateTask={(taskId, updates) => {
                                         const task = tasks.find(t => t.id === taskId);
                                         if (task) {
@@ -330,6 +379,41 @@ const App: React.FC = () => {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Modals */}
+            {selectedTaskForModal && (
+                <TaskDetailsModal
+                    task={selectedTaskForModal}
+                    users={users}
+                    projects={userProjects}
+                    columns={columns}
+                    teams={[]}
+                    allTasks={tasks}
+                    onClose={handleCloseTaskModal}
+                    onUpdateTask={handleUpdateTaskFromModal}
+                />
+            )}
+
+            {isProjectModalOpen && (
+                <ProjectFormModal 
+                    projectToEdit={projectToEdit}
+                    allUsers={users}
+                    allTeams={[]}
+                    onClose={() => {
+                        setIsProjectModalOpen(false);
+                        setProjectToEdit(null);
+                    }} 
+                    onSave={handleAddOrUpdateProject} 
+                />
+            )}
+
+            {confirmation && (
+                <ConfirmModal
+                    {...confirmation}
+                    cancelText="Cancelar"
+                    onClose={() => setConfirmation(null)}
+                />
             )}
         </div>
     );
