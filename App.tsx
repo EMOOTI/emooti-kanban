@@ -1583,6 +1583,8 @@ const App: React.FC = () => {
                         {/* Indicador de versión temporal */}
                         <div className="bg-yellow-500 text-black text-xl font-bold px-6 py-3 text-center border-4 border-red-500">
                             🔥 NUEVO DESPLIEGUE - Emooti v2.1 - MENÚ DE USUARIO ACTIVADO 🔥
+                            <br />
+                            <span className="text-sm">Versión: {new Date().toISOString()}</span>
                         </div>
                         {!currentProjectId && (
                             <Header 

@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Emooti - Gestor de Tareas Inteligente</title>
     
+    <!-- Anti-cache meta tags -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    
     <!-- PWA Meta Tags -->
     <meta name="description" content="Gestor de tareas moderno y colaborativo con integración de IA" />
     <meta name="theme-color" content="#6D28D9" />
@@ -62,5 +67,12 @@
 <body class="bg-light-bg dark:bg-dark-bg">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
+    <script>
+        // Forzar recarga sin cache
+        if (performance.navigation.type === 1) {
+            // Si es una recarga, limpiar cache
+            window.location.reload(true);
+        }
+    </script>
 </body>
 </html>
