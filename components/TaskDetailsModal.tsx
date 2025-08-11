@@ -10,8 +10,11 @@ import {
     CalendarIcon, 
     ChevronDownIcon,
     PlusIcon,
-    SparklesIcon
+    SparklesIcon,
+    VideoCameraIcon,
+    LinkIcon
 } from './icons';
+import TaskDependenciesModal from './TaskDependenciesModal';
 
 interface TaskDetailsModalProps {
     task: Task | null;
@@ -19,6 +22,7 @@ interface TaskDetailsModalProps {
     projects: Project[];
     columns: Column[];
     teams: Team[];
+    allTasks: Task[];
     onClose: () => void;
     onUpdateTask: (taskId: string, updates: Partial<Task>) => void;
 }
@@ -29,6 +33,7 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
     projects,
     columns,
     teams,
+    allTasks,
     onClose,
     onUpdateTask
 }) => {
@@ -246,6 +251,52 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
         return responsible.includes(userId);
     };
 
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedTask, setEditedTask] = useState<Task>(task);
+    const [isCreatingMeeting, setIsCreatingMeeting] = useState(false);
+    const [meetingUrl, setMeetingUrl] = useState<string | null>(task.meetingUrl || null);
+    const [isDependenciesModalOpen, setIsDependenciesModalOpen] = useState(false);
+
+    const handleCreateMeeting = async () => {
+        setIsCreatingMeeting(true);
+        try {
+            const project = projects.find(p => p.id === task.projectId);
+            const response = await fetch('/.netlify/functions/create-meeting', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    taskId: task.id,
+                    taskTitle: task.title,
+                    projectName: project?.name
+                })
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                setMeetingUrl(data.meetingUrl);
+                // Actualizar la tarea con la URL de la reunión
+                const updatedTask = { ...task, meetingUrl: data.meetingUrl };
+                onUpdateTask(updatedTask.id, updatedTask);
+            } else {
+                alert('Error al crear la reunión: ' + data.error);
+            }
+        } catch (error) {
+            console.error('Error creando reunión:', error);
+            alert('Error al crear la reunión. Inténtalo de nuevo.');
+        } finally {
+            setIsCreatingMeeting(false);
+        }
+    };
+
+    const handleJoinMeeting = () => {
+        if (meetingUrl) {
+            window.open(meetingUrl, '_blank');
+        }
+    };
+
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -254,13 +305,47 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                     <h2 className="text-xl font-semibold text-gray-900">
                         {task.isNewTask ? 'Crear Nueva Tarea' : 'Detalles de la Tarea'}
                     </h2>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
-                    >
+                    <div className="flex items-center space-x-2">
+                        {/* Botón de videollamada */}
+                        {meetingUrl ? (
+                            <button
+                                onClick={handleJoinMeeting}
+                                className="flex items-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-200"
+                                title="Unirse a la reunión"
+                            >
+                                <VideoCameraIcon />
+                                <span className="ml-2">Unirse</span>
+                            </button>
+                        ) : (
+                            <button
+                                onClick={handleCreateMeeting}
+                                disabled={isCreatingMeeting}
+                                className="flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg transition-colors duration-200"
+                                title="Crear videollamada"
+                            >
+                                <VideoCameraIcon />
+                                <span className="ml-2">
+                                    {isCreatingMeeting ? 'Creando...' : 'Videollamada'}
+                                </span>
+                            </button>
+                        )}
+                        
+                                            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
                         <XMarkIcon />
                     </button>
                 </div>
+            </div>
+
+            {/* Botón de dependencias */}
+            <div className="mb-4">
+                <button
+                    onClick={() => setIsDependenciesModalOpen(true)}
+                    className="flex items-center px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors duration-200"
+                >
+                    <LinkIcon />
+                    <span className="ml-2">Gestionar Dependencias</span>
+                </button>
+            </div>
 
                 {/* Content */}
                 <div className="p-6 space-y-6">
@@ -683,6 +768,14 @@ const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                     </button>
                 </div>
             </div>
+            {/* Dependencies Modal */}
+            <TaskDependenciesModal
+                isOpen={isDependenciesModalOpen}
+                onClose={() => setIsDependenciesModalOpen(false)}
+                currentTask={task}
+                allTasks={allTasks}
+                onUpdateTask={onUpdateTask}
+            />
         </div>
     );
 };

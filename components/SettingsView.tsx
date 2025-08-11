@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from '../hooks/useTheme';
 import { User } from '../types';
 import TestAPIButton from './TestAPIButton';
+import TwoFactorAuthModal from './TwoFactorAuthModal';
 
 interface SettingsViewProps {
     user: User;
@@ -11,6 +12,7 @@ interface SettingsViewProps {
 
 const SettingsView: React.FC<SettingsViewProps> = ({ user, onUpdateUser }) => {
     const { theme, toggleTheme } = useTheme();
+    const [is2FAModalOpen, setIs2FAModalOpen] = useState(false);
     const [formData, setFormData] = useState({
         firstName: user.firstName,
         lastName: user.lastName,
@@ -88,6 +90,25 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onUpdateUser }) => {
                 </div>
             </section>
 
+            {/* Security Section */}
+            <section>
+                <h2 className="text-2xl font-semibold mb-6 border-b border-light-border dark:border-dark-border pb-2">Seguridad</h2>
+                <div className="space-y-6">
+                    <div className="flex flex-col gap-4 sm:flex-row items-start sm:items-center justify-between max-w-xl">
+                        <div>
+                            <h3 className="font-medium">Autenticación de Dos Factores</h3>
+                            <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">Añade una capa extra de seguridad a tu cuenta.</p>
+                        </div>
+                        <button
+                            onClick={() => setIs2FAModalOpen(true)}
+                            className="px-4 py-2 bg-primary text-white font-semibold rounded-lg shadow-md hover:bg-primary-hover transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                        >
+                            Configurar 2FA
+                        </button>
+                    </div>
+                </div>
+            </section>
+
             {/* API Testing Section */}
             <section>
                 <h2 className="text-2xl font-semibold mb-6 border-b border-light-border dark:border-dark-border pb-2">Pruebas de API</h2>
@@ -100,6 +121,12 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, onUpdateUser }) => {
                 </button>
             </div>
 
+            {/* 2FA Modal */}
+            <TwoFactorAuthModal
+                isOpen={is2FAModalOpen}
+                onClose={() => setIs2FAModalOpen(false)}
+                currentUser={user}
+            />
         </div>
     );
 };

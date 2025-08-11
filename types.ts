@@ -1,7 +1,7 @@
 
 export type Id = string; // Firestore IDs are strings
 
-export type View = 'home' | 'mytasks' | 'dashboard' | 'projects' | 'board' | 'timeline' | 'settings' | 'users' | 'inbox' | 'voicetest';
+export type View = 'home' | 'mytasks' | 'dashboard' | 'projects' | 'board' | 'timeline' | 'settings' | 'users' | 'inbox' | 'voicetest' | 'reports';
 
 // Corresponds to /projects/{projectId} in Firestore
 export interface Project {
@@ -95,6 +95,9 @@ export interface Task {
     status?: 'pending' | 'completed'; // Estado de la tarea
     taskStatus?: 'pending' | 'completed'; // Estado de completado de la tarea (Firestore field)
     isNewTask?: boolean; // Flag para identificar tareas nuevas en el modal
+    meetingUrl?: string; // URL de la videollamada
+    dependencies?: Id[]; // IDs de tareas de las que depende esta tarea
+    dependents?: Id[]; // IDs de tareas que dependen de esta tarea
 }
 
 

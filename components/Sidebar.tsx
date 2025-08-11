@@ -505,16 +505,21 @@ const Sidebar: React.FC<SidebarProps> = ({
                         <div className={`ml-4 space-y-1 ${isMinimized ? 'ml-0 flex flex-col items-center' : ''}`}> 
                             <div className="relative group">
                                 <button 
-                                    className="w-full flex items-center px-3 py-1 text-gray-400 hover:text-white text-left"
-                                    onMouseEnter={(e) => handleTooltipHover(e, 'Informes')}
+                                    onClick={() => onNavigateToView('reports')}
+                                    className={`w-full flex items-center px-3 py-1 text-left transition-colors duration-200 ${
+                                        currentView === 'reports' 
+                                            ? 'text-white bg-gray-700 rounded' 
+                                            : 'text-gray-400 hover:text-white'
+                                    }`}
+                                    onMouseEnter={(e) => handleTooltipHover(e, 'Reportes')}
                                     onMouseLeave={() => setTooltip(null)}
                                 >
                                     <div className={`${isMinimized ? 'w-5 h-5' : ''} flex items-center justify-center`}>
                                         <ChartBarIcon2 />
                                     </div>
-                                    <span className={`ml-2 ${isMinimized ? 'hidden' : 'inline'}`}>Informes</span>
+                                    <span className={`ml-2 ${isMinimized ? 'hidden' : 'inline'}`}>Reportes</span>
                                 </button>
-                                {isMinimized && tooltip === 'Informes' && (
+                                {isMinimized && tooltip === 'Reportes' && (
                                     <div 
                                         className="fixed bg-gray-900 text-white text-xs rounded px-2 py-1 shadow-lg whitespace-nowrap z-[9999]"
                                         style={{ 
@@ -523,7 +528,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                                             transform: 'translateY(-50%)'
                                         }}
                                     >
-                                        Informes
+                                        Reportes
                                     </div>
                                 )}
                             </div>

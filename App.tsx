@@ -9,6 +9,7 @@ import { AIService } from './services/aiService';
 import { ColorService } from './services/colorService';
 import { useTheme } from './hooks/useTheme';
 import { useTeams } from './hooks/useTeams';
+import { notificationService as pushNotificationService } from './services/notificationService';
 import Header from './components/Header';
 import BoardView from './components/BoardView';
 import TimelineView from './components/TimelineView';
@@ -21,6 +22,7 @@ import MyTasksView from './components/MyTasksView';
 import SupportView from './components/SupportView';
 import InboxView from './components/InboxView';
 import VoiceTest from './components/VoiceTest';
+import ReportsView from './components/ReportsView';
 import AddMembersModal from './components/AddMembersModal';
 import TaskDetailsModal from './components/TaskDetailsModal';
 import FollowUpTaskModal from './components/FollowUpTaskModal';
@@ -59,6 +61,7 @@ const App: React.FC = () => {
     // Local UI & Notification State
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [activities, setActivities] = useState<Activity[]>([]);
+    const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState(false);
     
     // Session & Navigation State
     const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -152,6 +155,22 @@ const App: React.FC = () => {
             }
         };
     }, []);
+
+    // Initialize push notifications
+    useEffect(() => {
+        const initNotifications = async () => {
+            if (currentUser) {
+                const enabled = await pushNotificationService.initialize();
+                setPushNotificationsEnabled(enabled);
+                
+                if (enabled) {
+                    console.log('✅ Notificaciones push habilitadas');
+                }
+            }
+        };
+
+        initNotifications();
+    }, [currentUser]);
     
     // --- Firestore Listeners ---
     useEffect(() => {
@@ -1408,18 +1427,32 @@ const App: React.FC = () => {
             );
         }
 
-                            if (view === 'inbox') {
-                        return (
-                            <InboxView 
-                                currentUser={currentUser}
-                                onSendMessage={handleSendMessage}
-                            />
-                        );
-                    }
+                                    if (view === 'inbox') {
+            return (
+                <InboxView 
+                    currentUser={currentUser}
+                    onSendMessage={handleSendMessage}
+                />
+            );
+        }
 
-                    if (view === 'voicetest') {
-                        return <VoiceTest />;
-                    }
+        if (view === 'reports') {
+            return (
+                <ReportsView
+                    currentUser={currentUser}
+                    projects={sortedAllProjects}
+                    tasks={tasks}
+                    users={users}
+                    columns={columns}
+                    onSelectTask={setSelectedTaskForModal}
+                    onSelectProject={handleSelectProject}
+                />
+            );
+        }
+
+        if (view === 'voicetest') {
+            return <VoiceTest />;
+        }
 
         if (isSupportView) {
             return (

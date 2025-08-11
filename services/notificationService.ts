@@ -1,6 +1,222 @@
 
 import { User, Task } from '../types';
 
+export interface NotificationData {
+  title: string;
+  body: string;
+  icon?: string;
+  badge?: string;
+  tag?: string;
+  data?: any;
+  actions?: Array<{
+    action: string;
+    title: string;
+    icon?: string;
+  }>;
+}
+
+class NotificationService {
+  private registration: ServiceWorkerRegistration | null = null;
+  private isSupported = 'serviceWorker' in navigator && 'PushManager' in window;
+
+  async initialize(): Promise<boolean> {
+    if (!this.isSupported) {
+      console.warn('❌ Notificaciones push no soportadas en este navegador');
+      return false;
+    }
+
+    try {
+      // Registrar Service Worker
+      this.registration = await navigator.serviceWorker.register('/sw.js');
+      console.log('✅ Service Worker registrado:', this.registration);
+
+      // Solicitar permisos
+      const permission = await this.requestPermission();
+      if (permission === 'granted') {
+        console.log('✅ Permisos de notificación concedidos');
+        return true;
+      } else {
+        console.warn('❌ Permisos de notificación denegados');
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Error inicializando notificaciones:', error);
+      return false;
+    }
+  }
+
+  async requestPermission(): Promise<NotificationPermission> {
+    if (!this.isSupported) return 'denied';
+
+    const permission = await Notification.requestPermission();
+    return permission;
+  }
+
+  async subscribeToPush(): Promise<PushSubscription | null> {
+    if (!this.registration || !this.isSupported) {
+      return null;
+    }
+
+    try {
+      // Obtener suscripción existente
+      let subscription = await this.registration.pushManager.getSubscription();
+
+      if (!subscription) {
+        // Crear nueva suscripción
+        const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+        if (!vapidPublicKey) {
+          console.warn('❌ VAPID_PUBLIC_KEY no configurada');
+          return null;
+        }
+
+        subscription = await this.registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: this.urlBase64ToUint8Array(vapidPublicKey)
+        });
+
+        console.log('✅ Suscripción push creada:', subscription);
+      }
+
+      return subscription;
+    } catch (error) {
+      console.error('❌ Error suscribiendo a push:', error);
+      return null;
+    }
+  }
+
+  async unsubscribeFromPush(): Promise<boolean> {
+    if (!this.registration) return false;
+
+    try {
+      const subscription = await this.registration.pushManager.getSubscription();
+      if (subscription) {
+        await subscription.unsubscribe();
+        console.log('✅ Suscripción push eliminada');
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('❌ Error desuscribiendo de push:', error);
+      return false;
+    }
+  }
+
+  async showNotification(data: NotificationData): Promise<void> {
+    if (!this.registration || !this.isSupported) {
+      return;
+    }
+
+    try {
+      await this.registration.showNotification(data.title, {
+        body: data.body,
+        icon: data.icon || '/icon-192.png',
+        badge: data.badge || '/icon-72.png',
+        tag: data.tag,
+        data: data.data,
+        actions: data.actions,
+        requireInteraction: false,
+        silent: false,
+        vibrate: [100, 50, 100]
+      });
+    } catch (error) {
+      console.error('❌ Error mostrando notificación:', error);
+    }
+  }
+
+  async showTaskNotification(taskTitle: string, projectName: string, action: string): Promise<void> {
+    const notificationData: NotificationData = {
+      title: `Tarea: ${taskTitle}`,
+      body: `${action} en proyecto ${projectName}`,
+      tag: `task-${taskTitle}`,
+      data: {
+        type: 'task',
+        action: action,
+        projectName: projectName
+      },
+      actions: [
+        {
+          action: 'view',
+          title: 'Ver tarea'
+        },
+        {
+          action: 'dismiss',
+          title: 'Cerrar'
+        }
+      ]
+    };
+
+    await this.showNotification(notificationData);
+  }
+
+  async showProjectNotification(projectName: string, action: string): Promise<void> {
+    const notificationData: NotificationData = {
+      title: `Proyecto: ${projectName}`,
+      body: `${action}`,
+      tag: `project-${projectName}`,
+      data: {
+        type: 'project',
+        action: action,
+        projectName: projectName
+      }
+    };
+
+    await this.showNotification(notificationData);
+  }
+
+  async showReminderNotification(taskTitle: string, dueDate: string): Promise<void> {
+    const notificationData: NotificationData = {
+      title: '⏰ Recordatorio de Tarea',
+      body: `La tarea "${taskTitle}" vence el ${dueDate}`,
+      tag: `reminder-${taskTitle}`,
+      data: {
+        type: 'reminder',
+        taskTitle: taskTitle,
+        dueDate: dueDate
+      },
+      actions: [
+        {
+          action: 'view',
+          title: 'Ver tarea'
+        },
+        {
+          action: 'snooze',
+          title: 'Posponer'
+        }
+      ]
+    };
+
+    await this.showNotification(notificationData);
+  }
+
+  // Convertir VAPID key de base64 a Uint8Array
+  private urlBase64ToUint8Array(base64String: string): Uint8Array {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  }
+
+  // Verificar si las notificaciones están habilitadas
+  isEnabled(): boolean {
+    return this.isSupported && Notification.permission === 'granted';
+  }
+
+  // Obtener estado de permisos
+  getPermissionState(): NotificationPermission {
+    return Notification.permission;
+  }
+}
+
+export const notificationService = new NotificationService();
+
 /**
  * Simula el envío de un correo electrónico de notificación de asignación de tarea.
  * En una aplicación real, esto se conectaría a un servicio de correo electrónico (p. ej., SendGrid, Mailgun).
