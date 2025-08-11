@@ -1581,8 +1581,8 @@ const App: React.FC = () => {
                     />
                     <div className="flex-1 overflow-hidden flex flex-col">
                         {/* Indicador de versión temporal */}
-                        <div className="bg-blue-500 text-white text-xs px-2 py-1 text-center">
-                            Emooti v2.1 - Menú de usuario activado
+                        <div className="bg-red-500 text-white text-lg font-bold px-4 py-2 text-center">
+                            🚀 Emooti v2.1 - NUEVO MENÚ DE USUARIO ACTIVADO 🚀
                         </div>
                         {!currentProjectId && (
                             <Header 
