@@ -519,6 +519,7 @@ const App: React.FC = () => {
                                                             duplicateTask={() => {}}
                                                             createFollowUpTask={() => {}}
                                                             onAddColumn={() => {
+                                                                console.log('🔧 onAddColumn clicked - opening column modal');
                                                                 setColumnToEdit(null);
                                                                 setIsColumnModalOpen(true);
                                                             }}
@@ -606,10 +607,16 @@ const App: React.FC = () => {
                 <ColumnFormModal
                     columnToEdit={columnToEdit}
                     onClose={() => {
+                        console.log('🔧 Column modal closed');
                         setIsColumnModalOpen(false);
                         setColumnToEdit(null);
                     }}
-                    onSave={handleAddOrUpdateColumn}
+                    onSave={(columnData) => {
+                        console.log('🔧 Saving column:', columnData);
+                        handleAddOrUpdateColumn(columnData);
+                        setIsColumnModalOpen(false);
+                        setColumnToEdit(null);
+                    }}
                 />
             )}
 
